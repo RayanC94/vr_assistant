@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VR Assistant — Console de tests (Audio / Texte)</title>
+  <style>
+    :root {
+      --border: #e6e6e6;
+      --muted: #666;
+      --bg: #fafafa;
+      --card: #fff;
+      --shadow: 0 10px 25px rgba(0,0,0,.06);
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: #111;
+    }
+    header {
+      position: sticky; top: 0;
+      background: rgba(250,250,250,.9);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+    }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 18px 16px; }
+    h1 { margin: 0 0 6px; font-size: 1.25rem; }
+    .sub { color: var(--muted); font-size: .95rem; margin: 0; }
+
+    .grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 14px; padding: 14px 0 28px; }
+    @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    .card h2 { margin: 0 0 10px; font-size: 1.05rem; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
+
+    label { display:block; font-size: .88rem; color: var(--muted); margin-bottom: 6px; }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font: inherit;
+      background: #fff;
+      outline: none;
+    }
+    textarea { min-height: 90px; resize: vertical; }
+
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .tab {
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #fff;
+      cursor: pointer;
+      font-size: .92rem;
+    }
+    .tab.active {
+      border-color: #111;
+    }
+
+    .btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    button {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      cursor: pointer;
+      font: inherit;
+    }
+    button.primary { border-color: #111; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+
+    .pill {
+      display: inline-flex; gap: 8px; align-items: center;
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #fff;
+      font-size: .9rem;
+      color: #222;
+    }
+    .status { margin-top: 10px; display:flex; gap: 8px; flex-wrap: wrap; }
+    .muted { color: var(--muted); }
+    .ok { color: #0a7a2f; }
+    .bad { color: #b00020; }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      background: #f6f6f6;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      border-radius: 12px;
+      overflow-wrap: anywhere;
+    }
+    .section { display:none; }
+    .section.active { display:block; }
+
+    audio { width: 100%; margin-top: 10px; }
+    .hr { height: 1px; background: var(--border); margin: 12px 0; }
+    .small { font-size: .92rem; }
+    .right-col .card { position: sticky; top: 92px; }
+    @media (max-width: 980px) { .right-col .card { position: static; } }
+
+    .kv { display:grid; grid-template-columns: 160px 1fr; gap: 8px 10px; }
+    @media (max-width: 640px) { .kv { grid-template-columns: 1fr; } }
+    .k { color: var(--muted); font-size: .9rem; }
+    .v { font-size: .95rem; }
+
+    .hint {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1.35;
+    }
+
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>🧪 VR Assistant — Console de tests</h1>
+    <p class="sub">Tests Audio (micro) + Tests Texte — backend FastAPI (RAG + Intentions + TTS)</p>
+  </div>
+</header>
+
+<div class="wrap grid">
+  <!-- LEFT -->
+  <div class="left-col">
+    <div class="card">
+      <h2>Connexion backend</h2>
+      <div class="row">
+        <div>
+          <label>API_BASE (FastAPI)</label>
+          <input id="apiBase" value="http://127.0.0.1:8000" />
+        </div>
+        <div>
+          <label>Vérification</label>
+          <div class="btns" style="margin-top: 22px;">
+            <button id="btnHealth" class="primary">🔍 Tester /health</button>
+          </div>
+        </div>
+      </div>
+      <div class="status">
+        <span class="pill">Statut : <span id="healthStatus" class="muted">non testé</span></span>
+      </div>
+      <p class="hint">⚠️ Si tu ouvres cette page via <span class="mono">http://127.0.0.1:5500</span>, vérifie que CORS est activé côté FastAPI (tu l’as déjà fait).</p>
+    </div>
+
+    <div class="card" style="margin-top: 14px;">
+      <h2>Paramètres conversation</h2>
+      <div class="row">
+        <div>
+          <label>Mode</label>
+          <select id="mode">
+            <option value="Decouverte">Découverte</option>
+            <option value="Jeu">Jeu</option>
+          </select>
+        </div>
+        <div>
+          <label>Profil</label>
+          <input id="profile" value="etudiant" />
+        </div>
+      </div>
+      <div style="margin-top: 10px;">
+        <label>Objet ciblé (VR)</label>
+        <input id="target" value="Bistouri électrique" />
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 14px;">
+      <h2>Tests</h2>
+      <div class="tabs">
+        <button class="tab active" data-tab="audio">🎙️ Audio (micro)</button>
+        <button class="tab" data-tab="text">💬 Texte (/ask)</button>
+        <button class="tab" data-tab="tts">🔊 TTS (texte → mp3)</button>
+      </div>
+
+      <!-- AUDIO SECTION -->
+      <div id="tab-audio" class="section active">
+        <p class="small muted" style="margin-top:0;">
+          Enregistre ta voix → <span class="mono">/voice/turn-json</span> → affiche le texte → <span class="mono">/voice/tts</span> → joue le MP3
+        </p>
+
+        <div class="btns">
+          <button id="btnStart" class="primary">🎙️ Enregistrer</button>
+          <button id="btnStop" disabled>⏹️ Stop</button>
+          <button id="btnSend" disabled>📨 Envoyer</button>
+          <button id="btnReplay" disabled>🔁 Rejouer</button>
+        </div>
+
+        <div class="status">
+          <span class="pill">Statut : <span id="audioStatus" class="muted">prêt</span></span>
+          <span class="pill">Format : <span class="mono">audio/webm</span></span>
+        </div>
+
+        <div class="hr"></div>
+
+        <div>
+          <label>Aperçu enregistrement</label>
+          <audio id="audioPreview" controls style="display:none;"></audio>
+        </div>
+
+        <div style="margin-top: 10px;">
+          <label>Réponse audio (mp3)</label>
+          <audio id="audioAnswer" controls style="display:none;"></audio>
+        </div>
+      </div>
+
+      <!-- TEXT SECTION -->
+      <div id="tab-text" class="section">
+        <p class="small muted" style="margin-top:0;">
+          Envoie du texte directement à <span class="mono">/ask</span> (utile pour tester RAG sans audio).
+        </p>
+
+        <label>Question</label>
+        <textarea id="askText">A quoi sert le bistouri electrique et quelles precautions prendre ?</textarea>
+
+        <div class="btns">
+          <button id="btnAsk" class="primary">📨 Appeler /ask</button>
+        </div>
+
+        <div class="status">
+          <span class="pill">Statut : <span id="askStatus" class="muted">prêt</span></span>
+        </div>
+      </div>
+
+      <!-- TTS SECTION -->
+      <div id="tab-tts" class="section">
+        <p class="small muted" style="margin-top:0;">
+          Test direct de la synthèse vocale : <span class="mono">/voice/tts</span>
+        </p>
+
+        <label>Texte à vocaliser</label>
+        <textarea id="ttsText">Bonjour, ceci est un test de synthèse vocale.</textarea>
+
+        <div class="btns">
+          <button id="btnTTS" class="primary">🔊 Générer MP3</button>
+          <button id="btnReplayTTS" disabled>🔁 Rejouer</button>
+        </div>
+
+        <div class="status">
+          <span class="pill">Statut : <span id="ttsStatus" class="muted">prêt</span></span>
+        </div>
+
+        <div class="hr"></div>
+
+        <label>Audio (mp3)</label>
+        <audio id="audioTTS" controls style="display:none;"></audio>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right-col">
+    <div class="card">
+      <h2>Sorties (texte + debug)</h2>
+
+      <div class="kv">
+        <div class="k">Transcript (STT)</div>
+        <div class="v"><pre id="outTranscript">(vide)</pre></div>
+
+        <div class="k">Intent</div>
+        <div class="v"><pre id="outIntent">(vide)</pre></div>
+
+        <div class="k">Texte prononcé (TTS)</div>
+        <div class="v"><pre id="outAssistant">(vide)</pre></div>
+
+        <div class="k">Citations (RAG)</div>
+        <div class="v"><pre id="outCitations">(vide)</pre></div>
+      </div>
+
+      <div class="hr"></div>
+
+      <h2 style="margin-top:0;">Logs</h2>
+      <pre id="log"></pre>
+
+      <p class="hint">
+        Astuce : lance cette page via un serveur local :
+        <span class="mono">cd web && python3 -m http.server 5500</span>
+        puis ouvre <span class="mono">http://127.0.0.1:5500</span>.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // --------- Helpers UI ----------
+  const $ = (id) => document.getElementById(id);
+  const logEl = $("log");
+  function log(msg) { logEl.textContent += msg + "\n"; logEl.scrollTop = logEl.scrollHeight; }
+
+  function setPillText(el, text, cls) {
+    el.textContent = text;
+    el.classList.remove("muted","ok","bad");
+    el.classList.add(cls || "muted");
+  }
+
+  function clearOutputs() {
+    $("outTranscript").textContent = "(vide)";
+    $("outIntent").textContent = "(vide)";
+    $("outAssistant").textContent = "(vide)";
+    $("outCitations").textContent = "(vide)";
+  }
+
+  function apiBase() {
+    return $("apiBase").value.trim().replace(/\/+$/, "");
+  }
+
+  // --------- Tabs ----------
+  const tabs = document.querySelectorAll(".tab");
+  tabs.forEach(t => t.addEventListener("click", () => {
+    tabs.forEach(x => x.classList.remove("active"));
+    t.classList.add("active");
+    const tab = t.dataset.tab;
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+    $("tab-" + tab).classList.add("active");
+  }));
+
+  // --------- Health ----------
+  $("btnHealth").onclick = async () => {
+    setPillText($("healthStatus"), "test…", "muted");
+    logEl.textContent = "";
+    log("🔍 GET /health");
+
+    try {
+      const res = await fetch(`${apiBase()}/health`);
+      const txt = await res.text();
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${txt}`);
+      setPillText($("healthStatus"), "ok ✅", "ok");
+      log("✅ /health: " + txt);
+    } catch (e) {
+      setPillText($("healthStatus"), "erreur ❌", "bad");
+      log("❌ " + e);
+    }
+  };
+
+  // --------- Audio recording ----------
+  let recorder = null;
+  let chunks = [];
+  let recordedBlob = null;
+  let lastAnswerAudioURL = null;
+
+  const btnStart = $("btnStart");
+  const btnStop = $("btnStop");
+  const btnSend = $("btnSend");
+  const btnReplay = $("btnReplay");
+  const audioPreview = $("audioPreview");
+  const audioAnswer = $("audioAnswer");
+
+  btnStart.onclick = async () => {
+    logEl.textContent = "";
+    clearOutputs();
+    setPillText($("audioStatus"), "micro…", "muted");
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      chunks = [];
+      recordedBlob = null;
+
+      // webm est simple côté navigateur
+      recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        recordedBlob = new Blob(chunks, { type: "audio/webm" });
+        const url = URL.createObjectURL(recordedBlob);
+        audioPreview.src = url;
+        audioPreview.style.display = "block";
+
+        btnSend.disabled = false;
+        setPillText($("audioStatus"), "enregistrement terminé ✅", "ok");
+        log("✅ Audio enregistré (webm). Prêt à envoyer.");
+      };
+
+      recorder.start();
+      btnStart.disabled = true;
+      btnStop.disabled = false;
+      btnSend.disabled = true;
+      btnReplay.disabled = true;
+
+      setPillText($("audioStatus"), "enregistrement 🎙️", "muted");
+      log("🎙️ Enregistrement démarré...");
+    } catch (e) {
+      setPillText($("audioStatus"), "micro refusé ❌", "bad");
+      log("❌ Erreur micro: " + e);
+    }
+  };
+
+  btnStop.onclick = () => {
+    if (!recorder) return;
+    recorder.stop();
+    btnStart.disabled = false;
+    btnStop.disabled = true;
+    log("⏹️ Stop enregistrement.");
+  };
+
+  btnReplay.onclick = async () => {
+    if (!lastAnswerAudioURL) return;
+    audioAnswer.play();
+  };
+
+  async function postTurnJson(blob) {
+    const form = new FormData();
+    form.append("file", blob, "recording.webm");
+    form.append("mode", $("mode").value);
+    form.append("user_profile", $("profile").value);
+    form.append("target_object_name", $("target").value);
+
+    log("📨 POST /voice/turn-json");
+    const res = await fetch(`${apiBase()}/voice/turn-json`, { method: "POST", body: form });
+    const txt = await res.text();
+    if (!res.ok) throw new Error(`turn-json HTTP ${res.status}: ${txt}`);
+    return JSON.parse(txt);
+  }
+
+  async function postTTS(text) {
+    log("🔊 POST /voice/tts");
+    const res = await fetch(`${apiBase()}/voice/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text })
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(`tts HTTP ${res.status}: ${t}`);
+    }
+    const buf = await res.arrayBuffer();
+    return new Blob([buf], { type: "audio/mpeg" });
+  }
+
+  btnSend.onclick = async () => {
+    if (!recordedBlob) { log("❌ Aucun enregistrement à envoyer."); return; }
+
+    btnSend.disabled = true;
+    setPillText($("audioStatus"), "analyse…", "muted");
+
+    try {
+      // 1) Audio -> JSON
+      const data = await postTurnJson(recordedBlob);
+
+      // Affichages
+      $("outTranscript").textContent = data.transcript || "(vide)";
+      $("outIntent").textContent = `${data.intent || "(?)"} — ${data.confidence || "(?)"}`;
+      $("outAssistant").textContent = data.assistant_text || "(vide)";
+      $("outCitations").textContent = (data.citations && data.citations.length)
+        ? JSON.stringify(data.citations, null, 2)
+        : "(aucune)";
+
+      log("📝 Transcript: " + (data.transcript || ""));
+      log("🤖 Intent: " + (data.intent || "") + " (" + (data.confidence || "") + ")");
+      log("💬 Texte: " + (data.assistant_text || ""));
+
+      // 2) Texte -> MP3
+      setPillText($("audioStatus"), "synthèse vocale…", "muted");
+      const mp3Blob = await postTTS(data.assistant_text || "");
+
+      if (lastAnswerAudioURL) URL.revokeObjectURL(lastAnswerAudioURL);
+      lastAnswerAudioURL = URL.createObjectURL(mp3Blob);
+
+      audioAnswer.src = lastAnswerAudioURL;
+      audioAnswer.style.display = "block";
+      await audioAnswer.play();
+
+      btnReplay.disabled = false;
+      setPillText($("audioStatus"), "réponse jouée ✅", "ok");
+      log("✅ MP3 reçu et joué.");
+    } catch (e) {
+      setPillText($("audioStatus"), "erreur ❌", "bad");
+      log("❌ " + e);
+      btnSend.disabled = false;
+    }
+  };
+
+  // --------- Text /ask ----------
+  $("btnAsk").onclick = async () => {
+    logEl.textContent = "";
+    clearOutputs();
+    setPillText($("askStatus"), "appel…", "muted");
+
+    const payload = {
+      transcript: $("askText").value.trim(),
+      user_profile: $("profile").value,
+      mode: $("mode").value,
+      vr_context: { target_object_name: $("target").value }
+    };
+
+    try {
+      log("📨 POST /ask");
+      const res = await fetch(`${apiBase()}/ask`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const txt = await res.text();
+      if (!res.ok) throw new Error(`ask HTTP ${res.status}: ${txt}`);
+      const data = JSON.parse(txt);
+
+      $("outTranscript").textContent = "(test texte — pas de STT)";
+      $("outIntent").textContent = `${data.intent || "(?)"} — ${data.confidence || "(?)"}`;
+      $("outAssistant").textContent = data.assistant_text || "(vide)";
+      $("outCitations").textContent = (data.citations && data.citations.length)
+        ? JSON.stringify(data.citations, null, 2)
+        : "(aucune)";
+
+      setPillText($("askStatus"), "ok ✅", "ok");
+      log("✅ Réponse /ask reçue.");
+    } catch (e) {
+      setPillText($("askStatus"), "erreur ❌", "bad");
+      log("❌ " + e);
+    }
+  };
+
+  // --------- Direct TTS ----------
+  let lastTTSURL = null;
+
+  $("btnTTS").onclick = async () => {
+    logEl.textContent = "";
+    setPillText($("ttsStatus"), "génération…", "muted");
+
+    try {
+      const text = $("ttsText").value.trim();
+      if (!text) throw new Error("Texte TTS vide.");
+
+      const mp3Blob = await postTTS(text);
+
+      if (lastTTSURL) URL.revokeObjectURL(lastTTSURL);
+      lastTTSURL = URL.createObjectURL(mp3Blob);
+
+      const audioTTS = $("audioTTS");
+      audioTTS.src = lastTTSURL;
+      audioTTS.style.display = "block";
+      await audioTTS.play();
+
+      $("btnReplayTTS").disabled = false;
+      setPillText($("ttsStatus"), "ok ✅", "ok");
+      log("✅ MP3 TTS généré et joué.");
+    } catch (e) {
+      setPillText($("ttsStatus"), "erreur ❌", "bad");
+      log("❌ " + e);
+    }
+  };
+
+  $("btnReplayTTS").onclick = async () => {
+    const audioTTS = $("audioTTS");
+    if (audioTTS && audioTTS.src) audioTTS.play();
+  };
+
+  // Init
+  clearOutputs();
+  log("Prêt. Pense à démarrer le backend : uvicorn app.main:app --reload --port 8000");
+</script>
+
+</body>
+</html>
